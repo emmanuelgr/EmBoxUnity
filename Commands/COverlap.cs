@@ -10,7 +10,9 @@ public class COverlap:BaseCommand, ICommandComposition{
 	private List<ICommand> list;
 	private int cursor;
 	private float explode;
-
+	private int completeCmnds;
+	private int cmndsToComplete;
+		
 	public COverlap()
   : base( ){
 		init();
@@ -30,63 +32,84 @@ public class COverlap:BaseCommand, ICommandComposition{
 	public void Add( ICommand cmnd ){
 		list.Add( cmnd );
 	}
-
+		
 	protected override void DoIn(){
+		resetFnCounts();
 		if( list.Count == 0 ){
 			ExecuteInComplete();
 			return;
 		}
 		if( cursor == -1 ){
 			cursor = 0;
-			list[ cursor ].ExecuteIn();
 		}
+		cmndsToComplete = list.Count - cursor;
+		for( int i = 0; i < cmndsToComplete; i++ ){
+			list[ i ].FnInComplete = count;
+		}
+		list[ cursor ].ExecuteIn();
 		EmBox.CallLater( DoNext, DelayIn );
 	}
 
 	protected override void DoOut(){
+		resetFnCounts();
 		if( list.Count == 0 ){
 			ExecuteOutComplete();
 			return;
 		}
 		if( cursor == -1 ){
 			cursor = list.Count - 1;
-			list[ cursor ].ExecuteOut();
 		}
+		cmndsToComplete = cursor + 1;
+		for( int i = cursor; i >= 0; i-- ){
+			list[ i ].FnOutComplete = count;
+		}
+		list[ cursor ].ExecuteOut();
 		EmBox.CallLater( DoNext, DelayOut );
 	}
 
 	private void DoNext(){
 		switch( State ){
 		case States.ExecutingIn:
-			cursor++;
-			if( cursor > list.Count-1 ){
-				cursor = -1;
-				ExecuteInComplete();
+			if( cursor == list.Count - 1 ){
 				return;
 			}
+			cursor++;
 			list[ cursor ].ExecuteIn();
-//          explode = Time.time + DelayIn;
 			EmBox.CallLater( DoNext, DelayIn );
 			break;
 		case States.ExecutingOut:
-			cursor--;
-			if( cursor < 0 ){
-				cursor = -1;
-				ExecuteOutComplete();
+			if( cursor == 0 ){
 				return;
 			}
+			cursor--;
 			list[ cursor ].ExecuteOut();
-//          explode = Time.time + DelayOut;
 			EmBox.CallLater( DoNext, DelayOut );
 			break;
 		}
 	}
+		
+	private void resetFnCounts(){
+		completeCmnds = 0;
+		for( int i = 0; i < list.Count; i++ ){
+			list[ i ].FnInComplete = null;
+			list[ i ].FnOutComplete = null;
+		}
+	}
 
-//    void Update() {
-//      Debug.Log("explode <= Time.time"+(explode <= Time.time).ToString());
-//          if( explode <= Time.time ) DoNext();
-//    }
-
+	private void count(){
+		completeCmnds++;
+//      Debug.Log("State " + State);
+//      Debug.Log("completeCmnds " + completeCmnds);
+//      Debug.Log("list.Count " + list.Count);
+		if( completeCmnds == cmndsToComplete ){
+			cursor = -1;
+			if( State == States.ExecutingIn ){
+				ExecuteInComplete();
+			} else if( State == States.ExecutingOut ){
+				ExecuteOutComplete();
+			}
+		}
+	}
 }
 }
 

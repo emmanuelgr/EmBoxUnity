@@ -108,7 +108,7 @@ public class EmBox:MonoBehaviour{
 		EmBox.designWidth = designWidth;
 		EmBox.designHeight = designHeight;
 				
-		aMono = Camera.mainCamera.gameObject.AddComponent<AMono>();
+		aMono = Camera.main.gameObject.AddComponent<AMono>();
 
     #if UNITY_EDITOR || UNITY_STANDALONE
         DPIRatio = 72f/dpi;

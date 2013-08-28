@@ -10,6 +10,10 @@ public class Interpolate{
 		val = ( Mathf.Sin( val * Mathf.PI * ( 0.2f + 2.5f * val * val * val ) ) * Mathf.Pow( 1f - val, 2.2f ) + val ) * ( 1f + ( 1.2f * ( 1f - val ) ) );
 		return start + ( end - start ) * val;
 	}
+	public static float linear( float start, float end, float val ){
+		end -= start;
+		return end * val + start;
+	}
     
 	public static float easeInQuad( float start, float end, float val ){
 		end -= start;

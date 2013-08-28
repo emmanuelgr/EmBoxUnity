@@ -36,10 +36,6 @@ public class CInterpolate:BaseCommand{
 	}
 
 	protected override void DoIn(){
-		if( timeIn == 0f ){
-			ExecuteInComplete();
-			return;
-		} 
 		if( EmBox.UPDATE.Contains( update ) ){
 			timer = timeIn * ( 1 - ratio );
 		} else{
@@ -49,10 +45,6 @@ public class CInterpolate:BaseCommand{
 	}
 
 	protected override void DoOut(){
-		if( timeOut == 0f ){
-			ExecuteOutComplete();
-			return;
-		}
 		if( EmBox.UPDATE.Contains( update ) ){
 			timer = timeOut * ( 1 - ratio );
 		} else{

@@ -134,6 +134,7 @@ public class Constraint{
 				return aFloat;
 			}
 			return aFloat * (scaleVer?EmBox.SF:1f);
+//			return aFloat;
 		}
 	}
 		
