@@ -98,6 +98,10 @@ public class EmBox:MonoBehaviour{
 	private static float designHeight;
 	private static AMono aMono;
 	public static List<Action> UPDATE = new List<Action>();
+	private static GameObject scripts;
+	private static GameObject cam;
+	private static GUIStyle gUIStyleDefault;
+	
 	// Message sysytem
 	private static string debugMsg = "";
 	private Vector2 scrollPosition;
@@ -108,7 +112,7 @@ public class EmBox:MonoBehaviour{
 		EmBox.designWidth = designWidth;
 		EmBox.designHeight = designHeight;
 				
-		aMono = Camera.main.gameObject.AddComponent<AMono>();
+		aMono = Scripts.AddComponent<AMono>();
 
     #if UNITY_EDITOR || UNITY_STANDALONE
         DPIRatio = 72f/dpi;
@@ -116,6 +120,7 @@ public class EmBox:MonoBehaviour{
 			DPIRatio = Screen.dpi/dpi;
 		#endif
 	}
+	
 	void Update(){
 		
 		WRatio = (float)Screen.width / ( Screen.width > Screen.height ? designWidth : designHeight );
@@ -130,8 +135,44 @@ public class EmBox:MonoBehaviour{
 			UPDATE[i]();
 		}
 	}	
+	
 	public static void CallLater( Action act, float time ){
 		aMono.CallLater( act, time );
+	}
+	
+	public static GameObject Cam{
+		get{
+			if( cam == null ){
+				cam = GameObject.Find( "Main Camera" );
+			if( cam == null ){
+				 Debug.LogError("cant find camera with name:Main Camera");
+				}
+			}
+			return cam;
+		}
+	}	
+	
+	public static GameObject Scripts{
+		get{
+			if( scripts == null ){
+				scripts = GameObject.Find( "Scripts" );
+			if( scripts == null ){
+				 scripts = new GameObject("Scripts");
+				}
+			}
+			return scripts;
+		}
+	}
+	
+	public static GUIStyle GUIStyleDefault{
+		get{
+			if( gUIStyleDefault == null ){
+//				gUIStyleDefault = new GUIStyle();
+				gUIStyleDefault = GUIStyle.none;
+				
+			}
+			return gUIStyleDefault;
+		}
 	}
 	
 	private static GUIStyle debugGUIStyle;

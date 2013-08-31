@@ -14,7 +14,7 @@ public class CInterpolate:BaseCommand{
 	public Fn inFn, outFn;
 
 	public CInterpolate( float fromIn, float pose, float toOut, float timeIn, float timeOut, Fn inFn=null, Fn outFn=null ): base( ){
-		this.fromIn = fromIn;
+		this.fromIn = interpolated= fromIn;
 		this.toIn = pose;
 		this.fromOut = pose;
 		this.toOut = toOut;
@@ -25,7 +25,7 @@ public class CInterpolate:BaseCommand{
 	}
 
 	public CInterpolate( float fromIn, float toIn, float fromOut, float toOut, float timeIn, float timeOut, Fn inFn=null, Fn outFn=null ): base( ){
-		this.fromIn = fromIn;
+		this.fromIn = interpolated= fromIn;
 		this.toIn = toIn;
 		this.fromOut = fromOut;
 		this.toOut = toOut;
