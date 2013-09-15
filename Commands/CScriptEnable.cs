@@ -4,22 +4,20 @@ using EmBoxUnity.Commands.Core;
 
 namespace EmBoxUnity.Commands{
 public class CScriptEnable:BaseCommand{
-	private MonoBehaviour mb;
+	private Behaviour behaviour;
 
-	public CScriptEnable( MonoBehaviour mb, bool initValue=false ): base( ){
-		this.mb = mb;
-		mb.enabled = initValue;
+	public CScriptEnable( Behaviour behaviour, bool initValue=false ): base( ){
+		this.behaviour = behaviour;
+		behaviour.enabled = initValue;
 	}
 
 	protected override void DoIn(){
-//			Debug.Log(">: " + mb.GetType());
-		mb.enabled = true;
+		behaviour.enabled = true;
 		ExecuteInComplete();
 	}
 
 	protected override void DoOut(){
-//			Debug.Log("<: " + mb.GetType());
-		mb.enabled = false;
+		behaviour.enabled = false;
 		ExecuteOutComplete();
 	}
 }

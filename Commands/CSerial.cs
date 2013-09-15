@@ -21,15 +21,15 @@ public class CSerial:BaseCommand, ICommandComposition{
 		init();
 		list.AddRange( cmnds );
 		for( int i = 0; i < cmnds.Length; i++ ){
-			( cmnds[ i ] as ICommand ).FnInComplete = subInCom;
-			( cmnds[ i ] as ICommand ).FnOutComplete = subOutCom;
+//			( cmnds[ i ] as ICommand ).FnInComplete = subInCom;
+//			( cmnds[ i ] as ICommand ).FnOutComplete = subOutCom;
 		}
 	}
 
 	public void Add( ICommand cmnd ){
 		list.Add( cmnd );
-		cmnd.FnInComplete = subInCom;
-		cmnd.FnOutComplete = subOutCom;
+//		cmnd.FnInComplete = subInCom;
+//		cmnd.FnOutComplete = subOutCom;
 	}
 
 	protected override void DoIn(){
@@ -37,7 +37,14 @@ public class CSerial:BaseCommand, ICommandComposition{
 			ExecuteInComplete();
 			return;
 		}
+		list[ cursor ].FnInComplete = subInCom;
 		list[ cursor ].ExecuteIn();
+	}
+
+		protected override void CancelIn(){
+		list[ cursor ].FnInComplete = null;
+		list[ cursor ].FnOutComplete = subOutCom;
+		list[ cursor ].ExecuteOut();
 	}
 
 	protected override void DoOut(){
@@ -45,10 +52,18 @@ public class CSerial:BaseCommand, ICommandComposition{
 			ExecuteOutComplete();
 			return;
 		}
+		list[ cursor ].FnOutComplete = subOutCom;
 		list[ cursor ].ExecuteOut();
 	}
 
+		protected override void CancelOut(){
+		list[ cursor ].FnOutComplete = null;
+		list[ cursor ].FnInComplete = subInCom;
+		list[ cursor ].ExecuteIn();
+	}
+
 	private void subInCom(){
+		list[ cursor ].FnInComplete = null;
 		if( cursor == list.Count - 1 ){
 			ExecuteInComplete();
 		} else{
@@ -59,6 +74,7 @@ public class CSerial:BaseCommand, ICommandComposition{
 	}
 
 	private void subOutCom(){
+		list[ cursor ].FnOutComplete = null;
 		if( cursor == 0 ){
 			ExecuteOutComplete();
 		} else{

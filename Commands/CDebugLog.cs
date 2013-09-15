@@ -8,7 +8,8 @@ public class CDebugLog :BaseCommand{
 	public string StringOut;
       
 	public CDebugLog( string stringIn ):base( ){
-		StringIn = StringOut = stringIn;
+		StringIn = ">" + stringIn + ">";
+		StringOut = "<" + stringIn + "<";
 	}
 
 	public CDebugLog( string stringIn, string stringOut ):base( ){

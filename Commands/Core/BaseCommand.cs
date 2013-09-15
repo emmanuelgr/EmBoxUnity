@@ -1,3 +1,13 @@
+//case States.ExecuteError:
+//case States.ExecuteNone:
+//case States.ExecutingIn:
+//case States.ExecuteInComplete:
+//case States.ExecutingOut:
+//case States.ExecuteOutComplete:
+
+// NOTES-----------------------------------------------------
+// Need to check cycle case of cancelable!!!!!!!!!!!
+//---------------------------------------------------------------
 using System;
 using UnityEngine;
 
@@ -23,21 +33,29 @@ public class BaseCommand:ICommand{
 		switch( State ){
 		case States.ExecutingIn:
 				// busy... already executing In
-			needToDoAnOut = false; // reset value in case there was a request to do an Out
-			return;
+			needToDoAnOut = false; // reset value in case there was a request to do an Out 
 			break;
 		case States.ExecuteInComplete:
-			if( FnInComplete != null )
-				FnInComplete(); // all done but trigger fn() call again
-			return;
+//			if( FnInComplete != null )
+//				FnInComplete(); // all done but trigger fn() call again
 			break;
 		case States.ExecutingOut:
 			if( !Cancelable ){
 				needToDoAnIn = true;
-				return;
+			} else{
+				CancelOut();
+				seqIn();
 			}
 			break;
+		case States.ExecuteError:
+		case States.ExecuteNone:
+		case States.ExecuteOutComplete:
+			seqIn();
+			break;
 		}
+	}
+
+	private void seqIn(){
 		State = States.ExecutingIn;
 		PreExecuteIn();
 		DoIn();
@@ -46,39 +64,46 @@ public class BaseCommand:ICommand{
 	public void ExecuteOut(){
 		switch( State ){
 		case	 States.ExecutingOut:
-			return; // busy... already executing Out
+			// busy... already executing Out
 			needToDoAnIn = false; // reset value in case there was a request to do an Out
 			break;
 		case	 States.ExecuteOutComplete:
-			if( FnOutComplete != null )
-				FnOutComplete(); // all done but trigger fn() call again
-			return;
+//			if( FnOutComplete != null )
+//				FnOutComplete(); // all done but trigger fn() call again
 			break;
 		case	 States.ExecuteNone:
-			return ; // Will need to do an in before ... 
+			 // Will need to do an in before ... 
 			break;
 		case States.ExecutingIn:
 			if( !Cancelable ){
 				needToDoAnOut = true;
-				return;
+			} else{
+				CancelIn();
+				seqOut();
 			}
 			break;
+		case States.ExecuteError:
+		case States.ExecuteInComplete:
+			seqOut();
+			break;
 		}
+	}
+
+	private void seqOut(){
 		State = States.ExecutingOut;
 		PreExecuteOut();
 		DoOut();
 	}
-		
 	/// <summary>
 	/// Allways call this Fn when DoIn has finished
 	/// </summary>
 	protected void ExecuteInComplete(){
 		State = States.ExecuteInComplete;
+		PostExecuteIn();
 		if( FnInComplete != null )
 			FnInComplete();
-		PostExecuteIn();
 		if( needToDoAnOut ){
-			needToDoAnIn = false;
+			needToDoAnOut = false;
 			ExecuteOut();
 		}
 	}
@@ -88,11 +113,11 @@ public class BaseCommand:ICommand{
 	/// </summary>
 	protected void ExecuteOutComplete(){
 		State = States.ExecuteOutComplete;
+		PostExecuteOut();
 		if( FnOutComplete != null )
 			FnOutComplete();
-		PostExecuteOut();
 		if( needToDoAnIn ){
-			needToDoAnOut = false;
+			needToDoAnIn = false;
 			ExecuteIn();
 		}
 	}
@@ -105,6 +130,9 @@ public class BaseCommand:ICommand{
 	///  Override and call ExecuteInComplete() when done
 	/// </summary>
 	protected virtual void DoIn(){
+	}
+
+	protected virtual void CancelIn(){
 	}
 	/// <summary>
 	/// Triggered after ExecuteInComplete()
@@ -122,6 +150,9 @@ public class BaseCommand:ICommand{
 	/// Override and call ExecuteOutComplete() when done
 	/// </summary>
 	protected virtual void DoOut(){
+	}
+
+	protected virtual void CancelOut(){
 	}
 	/// <summary>
 	/// Triggered after ExecuteOutComplete()

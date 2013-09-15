@@ -86,9 +86,9 @@ public class EmBox:MonoBehaviour{
 	/// <summary>
 	/// The ScaleFactor.
 	/// </summary>
-	public static float SF =1;
-	public static float minSF =0.5f;
-	public static float maxSF =1.25f;
+	public static float SF = 1;
+	public static float minSF = 0.5f;
+	public static float maxSF = 1.25f;
 	public static float DPIRatio;
 	public static float RealEstateRatio;
 	public static bool ShowMesseges = false;
@@ -96,68 +96,115 @@ public class EmBox:MonoBehaviour{
 	private static float HRatio;
 	private static float designWidth;
 	private static float designHeight;
-	private static AMono aMono;
 	public static List<Action> UPDATE = new List<Action>();
 	private static GameObject scripts;
 	private static GameObject cam;
 	private static GUIStyle gUIStyleDefault;
+	private static int guid = 1;
+	// Callater
+	private static List<int> guids = new List< int>();
+	private static List<Action> actions = new List< Action>();
+	private static List<float> times = new List< float>();
+	private static int anInt;
+	private static Action anAction;
 	
+	/// <summary>
+	/// Gets an global unique identifier.
+	/// </summary>
+	/// <value>
+	/// The GUI.
+	/// </value>
+	public static int GUID{
+		get{ return guid++; 	}
+	}
+	
+	public static void CallLaterCancel( int guid ){
+		anInt = guids.IndexOf( guid );
+		if( anInt >= 0 ){
+			guids.RemoveAt( anInt );
+			times.RemoveAt( anInt );
+			actions.RemoveAt( anInt );
+		}
+	}
+
+	public static void CallLater( Action act, float time, int guid ){
+		anInt = guids.IndexOf( guid );
+		if( anInt >= 0 ){
+			times[ anInt ] = time + Time.time;
+		} else{
+			guids.Add( guid );
+			actions.Add( act );
+			times.Add( time + Time.time );
+		}
+	}
+
 	// Message sysytem
 	private static string debugMsg = "";
 	private Vector2 scrollPosition;
-	private static Constraint scrollerRect = new Constraint( "0.3", "0.3", Ninegrid.Types.MiddleLeft, Ninegrid.Types.MiddleLeft, 0, 0 );
+	private static Constraint scrollerRect = new Constraint( "0.5", "0.5", Ninegrid.Types.MiddleLeft, Ninegrid.Types.MiddleLeft, 0, 0 );
 	
 	public void Init( float designWidth, float designHeight, float dpi=260 ){
 		Debug.Log( "<<<<<<<<<<--------EMBOX-------->>>>>>>>>>" );
 		EmBox.designWidth = designWidth;
 		EmBox.designHeight = designHeight;
 				
-		aMono = Scripts.AddComponent<AMono>();
-
     #if UNITY_EDITOR || UNITY_STANDALONE
         DPIRatio = 72f/dpi;
 		#else
-			DPIRatio = Screen.dpi/dpi;
+		DPIRatio = Screen.dpi / dpi;
 		#endif
+		calcSF();
 	}
 	
 	void Update(){
+    #if UNITY_EDITOR || UNITY_STANDALONE
+		calcSF();
+		#endif
 		
+//		Debug.Log( "l: " + EmBox.UPDATE.Count );
+		for( int i = 0; i < UPDATE.Count; i++ ){
+			UPDATE[ i ]();
+		}
+		#region CallLater
+		for( int k=guids.Count - 1; k > -1; k-- ){
+			if( times[ k ] <= Time.time ){
+				anAction = actions[ k ];
+				guids.RemoveAt( k );
+				times.RemoveAt( k );
+				actions.RemoveAt( k );
+				anAction();
+			}
+		}
+#endregion
+	}
+	
+	private void calcSF(){
 		WRatio = (float)Screen.width / ( Screen.width > Screen.height ? designWidth : designHeight );
 		HRatio = (float)Screen.height / ( Screen.width > Screen.height ? designHeight : designWidth );
 		RealEstateRatio = Math.Min( WRatio, HRatio );
 //		RealEstateRatio = ( WRatio + HRatio )/2;
 		SF = Math.Min( RealEstateRatio, DPIRatio );
-		SF = Mathf.Clamp( SF, minSF, maxSF);
-		
-//		Debug.Log( "l: " + EmBox.UPDATE.Count );
-		for (int i = 0; i < UPDATE.Count; i++) {
-			UPDATE[i]();
-		}
-	}	
-	
-	public static void CallLater( Action act, float time ){
-		aMono.CallLater( act, time );
+		SF = Mathf.Clamp( SF, minSF, maxSF );
 	}
 	
 	public static GameObject Cam{
 		get{
 			if( cam == null ){
 				cam = GameObject.Find( "Main Camera" );
-			if( cam == null ){
-				 Debug.LogError("cant find camera with name:Main Camera");
+				if( cam == null ){
+					Debug.LogError( "cant find camera with name:Main Camera" );
 				}
 			}
 			return cam;
 		}
-	}	
+	}
 	
 	public static GameObject Scripts{
 		get{
 			if( scripts == null ){
 				scripts = GameObject.Find( "Scripts" );
-			if( scripts == null ){
-				 scripts = new GameObject("Scripts");
+				if( scripts == null ){
+					scripts = new GameObject( "Scripts" );
 				}
 			}
 			return scripts;
@@ -194,6 +241,10 @@ public class EmBox:MonoBehaviour{
 		}
 	}
 	
+	public static void ClearMessages(){
+		debugMsg = "";
+	}
+
 	public static void Message( string msg ){
 		debugMsg += msg + "\n";
 	}
@@ -209,14 +260,5 @@ public class EmBox:MonoBehaviour{
 //		Debug.Log( debugMsg);
 	}
 }
-public class AMono : MonoBehaviour{
 
-	public void CallLater( Action act, float time ){
-		StartCoroutine( calllaterCoRoutine( act, time ) );
-	}
 
-	IEnumerator calllaterCoRoutine( Action act, float time ){
-		yield return new WaitForSeconds(time);
-		act();
-	}
-}
