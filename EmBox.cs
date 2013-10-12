@@ -87,15 +87,18 @@ public class EmBox:MonoBehaviour{
 	/// The ScaleFactor.
 	/// </summary>
 	public static float SF = 1;
-	public static float minSF = 0.5f;
+	public static float minSF = 0.25f;
 	public static float maxSF = 1.25f;
 	public static float DPIRatio;
 	public static float RealEstateRatio;
 	public static bool ShowMesseges = false;
+	public static bool ScreenChanged = true;
 	private static float WRatio;
 	private static float HRatio;
 	private static float designWidth;
 	private static float designHeight;
+	private static int lastWidth;
+	private static int lastHeight;
 	public static List<Action> UPDATE = new List<Action>();
 	private static GameObject scripts;
 	private static GameObject cam;
@@ -111,11 +114,67 @@ public class EmBox:MonoBehaviour{
 	/// <summary>
 	/// Gets an global unique identifier.
 	/// </summary>
-	/// <value>
-	/// The GUI.
-	/// </value>
 	public static int GUID{
 		get{ return guid++; 	}
+	}
+	
+	// Message sysytem
+	private static string debugMsg = "";
+	private Vector2 scrollPosition;
+	private static Constraint scrollerRect = new Constraint( "0.5", "0.5", Ninegrid.Types.MiddleLeft, Ninegrid.Types.MiddleLeft, 0, 0 );
+	
+	public void Init( float designWidth, float designHeight, float dpi=260 ){
+		Debug.Log( "<<<<<<<<<<--------EMBOX-------->>>>>>>>>>" );
+		EmBox.designWidth = designWidth;
+		EmBox.designHeight = designHeight;
+				
+    #if UNITY_EDITOR || UNITY_STANDALONE
+        DPIRatio = 72f/dpi;
+		#else
+		DPIRatio = Screen.dpi / dpi;
+		#endif
+	}
+	
+	void Update(){
+		#region  Screen change detection
+		if( Screen.width != lastWidth || Screen.height != lastHeight ){
+			ScreenChanged = true;
+			lastWidth = Screen.width;
+			lastHeight = Screen.height;
+			calcSF();
+		} else{
+			ScreenChanged = false;
+		}
+		#endregion
+		
+		#region fns to call every Update
+//		Debug.Log( "l: " + EmBox.UPDATE.Count );
+		for( int i = 0; i < UPDATE.Count; i++ ){
+			UPDATE[ i ]();
+		}
+		#endregion
+	
+		#region CallLater
+		for( int k=times.Count - 1; k > -1; k-- ){
+			if( times[ k ] <= Time.time ){
+				anAction = actions[ k ];
+				guids.RemoveAt( k );
+				times.RemoveAt( k );
+				actions.RemoveAt( k );
+				anAction();
+			}
+		}
+		#endregion
+	}
+	
+	
+	private void calcSF(){
+		WRatio = (float)Screen.width / ( Screen.width > Screen.height ? designWidth : designHeight );
+		HRatio = (float)Screen.height / ( Screen.width > Screen.height ? designHeight : designWidth );
+		RealEstateRatio = Math.Min( WRatio, HRatio );
+//		RealEstateRatio = ( WRatio + HRatio )/2;
+		SF = Math.Min( RealEstateRatio, DPIRatio );
+		SF = Mathf.Clamp( SF, minSF, maxSF );
 	}
 	
 	public static void CallLaterCancel( int guid ){
@@ -138,55 +197,6 @@ public class EmBox:MonoBehaviour{
 		}
 	}
 
-	// Message sysytem
-	private static string debugMsg = "";
-	private Vector2 scrollPosition;
-	private static Constraint scrollerRect = new Constraint( "0.5", "0.5", Ninegrid.Types.MiddleLeft, Ninegrid.Types.MiddleLeft, 0, 0 );
-	
-	public void Init( float designWidth, float designHeight, float dpi=260 ){
-		Debug.Log( "<<<<<<<<<<--------EMBOX-------->>>>>>>>>>" );
-		EmBox.designWidth = designWidth;
-		EmBox.designHeight = designHeight;
-				
-    #if UNITY_EDITOR || UNITY_STANDALONE
-        DPIRatio = 72f/dpi;
-		#else
-		DPIRatio = Screen.dpi / dpi;
-		#endif
-		calcSF();
-	}
-	
-	void Update(){
-    #if UNITY_EDITOR || UNITY_STANDALONE
-		calcSF();
-		#endif
-		
-//		Debug.Log( "l: " + EmBox.UPDATE.Count );
-		for( int i = 0; i < UPDATE.Count; i++ ){
-			UPDATE[ i ]();
-		}
-		#region CallLater
-		for( int k=guids.Count - 1; k > -1; k-- ){
-			if( times[ k ] <= Time.time ){
-				anAction = actions[ k ];
-				guids.RemoveAt( k );
-				times.RemoveAt( k );
-				actions.RemoveAt( k );
-				anAction();
-			}
-		}
-#endregion
-	}
-	
-	private void calcSF(){
-		WRatio = (float)Screen.width / ( Screen.width > Screen.height ? designWidth : designHeight );
-		HRatio = (float)Screen.height / ( Screen.width > Screen.height ? designHeight : designWidth );
-		RealEstateRatio = Math.Min( WRatio, HRatio );
-//		RealEstateRatio = ( WRatio + HRatio )/2;
-		SF = Math.Min( RealEstateRatio, DPIRatio );
-		SF = Mathf.Clamp( SF, minSF, maxSF );
-	}
-	
 	public static GameObject Cam{
 		get{
 			if( cam == null ){

@@ -7,11 +7,13 @@ namespace EmBoxUnity.Commands{
 public class COverlap:BaseCommand, ICommandComposition{
 	public float DelayIn = 0.3f;
 	public float DelayOut = 0.1f;
-	private List<ICommand> list;
-	private List<int> guidsIns;
-	private List<int> guidsOut;
+	private List<ICommand> cmnds;
+	private List<int> guids;
+	private List<int> guidsIn;//unique ids for CallLlater fn()
+	private List<int> guidsOut;//unique ids for CallLlater fn()
+	private List<int> guidsInComplete;
+	private List<int> guidsOutComplete;
 	private int cursor;
-	private float explode;
 	private int completeCmnds;
 	private int cmndsToComplete;
 		
@@ -24,104 +26,120 @@ public class COverlap:BaseCommand, ICommandComposition{
   : base( ){
 		init();
 		for( int i = 0; i < cmnds.Length; i++ ){
-			list[ i ] =cmnds[i];
-			guidsIns[ i ] = EmBox.GUID;
-			guidsOut[ i ] = EmBox.GUID;
+			this.cmnds[ i ] = cmnds[ i ];
+			guids.Add( cmnds[ i ].GUID );
+			guidsIn.Add( EmBox.GUID );
+			guidsOut.Add( EmBox.GUID );
+			guidsInComplete.Add( EmBox.GUID );
+			guidsOutComplete.Add( EmBox.GUID );
 		}
 	}
 
 	private void init(){
-		list = new List<ICommand>();
-		guidsIns = new List<int>();
+		cmnds = new List<ICommand>();
+		guids = new List<int>();
+		guidsIn = new List<int>();
 		guidsOut = new List<int>();
-		cursor = -1;
+		guidsInComplete = new List<int>();
+		guidsOutComplete = new List<int>();
+		cursor = 0;
 	}
 
 	public void Add( ICommand cmnd ){
-		list.Add( cmnd );
-		guidsIns.Add( EmBox.GUID );
+		cmnds.Add( cmnd );
+		guids.Add( cmnd.GUID );
+		guidsIn.Add( EmBox.GUID );
 		guidsOut.Add( EmBox.GUID );
+		guidsInComplete.Add( EmBox.GUID );
+		guidsOutComplete.Add( EmBox.GUID );
 	}
 		
 	protected override void DoIn(){
-		resetFnCounts();
-		if( list.Count == 0 ){
+		if( cmnds.Count == 0 ){
 			ExecuteInComplete();
 			return;
 		}
-		if( cursor == -1 ){
-			cursor = 0;
+		cmndsToComplete = cmnds.Count - cursor;
+		cmnds[ cursor ].AddOnInComplete( countIn, guidsInComplete[ cursor ] );
+		cmnds[ cursor ].ExecuteIn();
+		if( cursor + 1 <= cmnds.Count - 1 ){
+			EmBox.CallLater( DoNext, DelayIn, guidsIn[ cursor + 1 ] );
 		}
-		cmndsToComplete = list.Count - cursor;
-		for( int i = 0; i < cmndsToComplete; i++ ){
-			list[ i ].FnInComplete = count;
-		}
-		list[ cursor ].ExecuteIn();
-				if( cursor +1 <= list.Count-1){
-		EmBox.CallLater( DoNext, DelayIn, guidsIns[ cursor + 1 ] );}
 	}
 
+	protected override void CancelIn(){
+		completeCmnds = 0;
+		for( int i = 0; i < cmnds.Count; i++ ){
+			cmnds[ i ].RemOnInComplete( guidsInComplete[ i ] );
+			EmBox.CallLaterCancel( guidsIn[ i ] );
+		}
+	}
+		
 	protected override void DoOut(){
-		resetFnCounts();
-		if( list.Count == 0 ){
+		if( cmnds.Count == 0 ){
 			ExecuteOutComplete();
 			return;
 		}
-		if( cursor == -1 ){
-			cursor = list.Count - 1;
-		}
 		cmndsToComplete = cursor + 1;
-		for( int i = cursor; i >= 0; i-- ){
-			list[ i ].FnOutComplete = count;
+		cmnds[ cursor ].AddOnOutComplete( countOut, guidsOutComplete[ cursor ] );
+		cmnds[ cursor ].ExecuteOut();
+		if( cursor - 1 >= 0 ){
+			EmBox.CallLater( DoNext, DelayOut, guidsOut[ cursor - 1 ] );
 		}
-		list[ cursor ].ExecuteOut();
-					if( cursor -1 >= 0){
-		EmBox.CallLater( DoNext, DelayOut, guidsOut[ cursor - 1 ] );}
+	}
+
+	protected override void CancelOut(){
+		completeCmnds = 0;
+		for( int i = 0; i < cmnds.Count; i++ ){
+			cmnds[ i ].RemOnOutComplete( guidsOutComplete[ i ] );
+			EmBox.CallLaterCancel( guidsOut[ i ] );
+		}
 	}
 
 	private void DoNext(){
 		switch( State ){
 		case States.ExecutingIn:
-			if( cursor == list.Count - 1 ){
+			if( cursor == cmnds.Count - 1 ){
 				return;
 			}
 			cursor++;
-			list[ cursor ].ExecuteIn();
-				if( cursor +1 <= list.Count-1){
-			EmBox.CallLater( DoNext, DelayIn, guidsIns[ cursor + 1 ] );}
+			cmnds[ cursor ].AddOnInComplete( countIn, guidsInComplete[ cursor ] );
+			cmnds[ cursor ].ExecuteIn();
+			if( cursor + 1 <= cmnds.Count - 1 ){
+				EmBox.CallLater( DoNext, DelayIn, guidsIn[ cursor + 1 ] );
+			}
 			break;
 		case States.ExecutingOut:
 			if( cursor == 0 ){
 				return;
 			}
 			cursor--;
-			list[ cursor ].ExecuteOut();
-					if( cursor -1 >= 0){
-			EmBox.CallLater( DoNext, DelayOut, guidsOut[ cursor - 1 ] );}
+			cmnds[ cursor ].AddOnOutComplete( countOut, guidsOutComplete[ cursor ] );
+			cmnds[ cursor ].ExecuteOut();
+			if( cursor - 1 >= 0 ){
+				EmBox.CallLater( DoNext, DelayOut, guidsOut[ cursor - 1 ] );
+			}
 			break;
 		}
 	}
 		
-	private void resetFnCounts(){
-		completeCmnds = 0;
-		for( int i = 0; i < list.Count; i++ ){
-			list[ i ].FnInComplete = null;
-			list[ i ].FnOutComplete = null;
-			EmBox.CallLaterCancel( guidsIns[ i ] );
-			EmBox.CallLaterCancel( guidsOut[ i ] );
+	private void countIn( int guid ){
+		cmnds[ guidsInComplete.IndexOf( guid ) ].RemOnInComplete( guid );
+		completeCmnds++;
+//		Debug.Log( " completed  " + completeCmnds + "/" + cmndsToComplete + " cmnds.Count:" + cmnds.Count );
+		if( completeCmnds == cmndsToComplete ){
+			completeCmnds = 0;
+			ExecuteInComplete();
 		}
 	}
 
-	private void count(){
+	private void countOut( int guid ){
+		cmnds[ guidsOutComplete.IndexOf( guid ) ].RemOnOutComplete( guid );
 		completeCmnds++;
-//      Debug.Log( "State " + State +" completed  " + completeCmnds + "/" + cmndsToComplete + " list.Count:" + list.Count);
+//		Debug.Log( " completed  " + completeCmnds + "/" + cmndsToComplete + " cmnds.Count:" + cmnds.Count );
 		if( completeCmnds == cmndsToComplete ){
-			cursor = -1;
-			if( State == States.ExecutingIn ){
-				ExecuteInComplete();
-			} else if( State == States.ExecutingOut ){
-				ExecuteOutComplete();
-			}
+			completeCmnds = 0;
+			ExecuteOutComplete();
 		}
 	}
 }

@@ -10,42 +10,39 @@
 //---------------------------------------------------------------
 using System;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace EmBoxUnity.Commands.Core{
 public class BaseCommand:ICommand{
+		
+	private int guid;
+	private List<int> guidsIn = new List< int>();
+	private List<Action< int>> actionsIn = new List< Action<int>>();
+	private List<int> guidsOut = new List< int>();
+	private List<Action<int>> actionsOut = new List< Action<int>>();
+	private static int anInt;
+		
+	public int GUID { get { return guid; } }
+
 	public States State { get; set; }
 
-	public Action FnInComplete { get; set; }
-
-	public Action FnOutComplete { get; set; }
-
-	public bool Cancelable { get { return cancelable; } set { cancelable = value; } } // Wrapped it in a prop in order to avoid default bool value of false
-
-	private bool cancelable = true;
-	private bool needToDoAnIn = false;
-	private bool needToDoAnOut = false;
-
 	public BaseCommand(){
+		guid = EmBox.GUID;
 		State = States.ExecuteNone;
 	}
 
-	public void ExecuteIn(){
+	public virtual void ExecuteIn(){
 		switch( State ){
 		case States.ExecutingIn:
 				// busy... already executing In
-			needToDoAnOut = false; // reset value in case there was a request to do an Out 
 			break;
 		case States.ExecuteInComplete:
-//			if( FnInComplete != null )
-//				FnInComplete(); // all done but trigger fn() call again
+//			// all done but trigger fn() call again
+				 ExecuteInComplete();
 			break;
 		case States.ExecutingOut:
-			if( !Cancelable ){
-				needToDoAnIn = true;
-			} else{
-				CancelOut();
-				seqIn();
-			}
+			CancelOut();
+			seqIn();
 			break;
 		case States.ExecuteError:
 		case States.ExecuteNone:
@@ -61,26 +58,21 @@ public class BaseCommand:ICommand{
 		DoIn();
 	}
 
-	public void ExecuteOut(){
+	public virtual void ExecuteOut(){
 		switch( State ){
 		case	 States.ExecutingOut:
 			// busy... already executing Out
-			needToDoAnIn = false; // reset value in case there was a request to do an Out
 			break;
 		case	 States.ExecuteOutComplete:
-//			if( FnOutComplete != null )
-//				FnOutComplete(); // all done but trigger fn() call again
+// all done but trigger fn() call again
+				ExecuteOutComplete();
 			break;
 		case	 States.ExecuteNone:
 			 // Will need to do an in before ... 
 			break;
 		case States.ExecutingIn:
-			if( !Cancelable ){
-				needToDoAnOut = true;
-			} else{
-				CancelIn();
-				seqOut();
-			}
+			CancelIn();
+			seqOut();
 			break;
 		case States.ExecuteError:
 		case States.ExecuteInComplete:
@@ -100,11 +92,8 @@ public class BaseCommand:ICommand{
 	protected void ExecuteInComplete(){
 		State = States.ExecuteInComplete;
 		PostExecuteIn();
-		if( FnInComplete != null )
-			FnInComplete();
-		if( needToDoAnOut ){
-			needToDoAnOut = false;
-			ExecuteOut();
+		for( int i = 0; i < actionsIn.Count; i++ ){
+			actionsIn[ i ]( guidsIn[ i ] );
 		}
 	}
 
@@ -114,11 +103,8 @@ public class BaseCommand:ICommand{
 	protected void ExecuteOutComplete(){
 		State = States.ExecuteOutComplete;
 		PostExecuteOut();
-		if( FnOutComplete != null )
-			FnOutComplete();
-		if( needToDoAnIn ){
-			needToDoAnIn = false;
-			ExecuteIn();
+		for( int i = 0; i < actionsOut.Count; i++ ){
+			actionsOut[ i ]( guidsOut[ i ] );
 		}
 	}
 	/// <summary>
@@ -173,5 +159,40 @@ public class BaseCommand:ICommand{
 			break;
 		}
 	}
+
+	public void AddOnInComplete( Action<int> act, int guid ){
+		anInt = guidsIn.IndexOf( guid );
+		if( anInt >= 0 ){
+		} else{
+			guidsIn.Add( guid );
+			actionsIn.Add( act );
+		}
+	}
+
+	public void RemOnInComplete( int guid ){
+		anInt = guidsIn.IndexOf( guid );
+		if( anInt >= 0 ){
+			guidsIn.RemoveAt( anInt );
+			actionsIn.RemoveAt( anInt );
+		}
+	}
+
+	public void AddOnOutComplete( Action<int> act, int guid ){
+		anInt = guidsOut.IndexOf( guid );
+		if( anInt >= 0 ){
+		} else{
+			guidsOut.Add( guid );
+			actionsOut.Add( act );
+		}
+	}
+
+	public void RemOnOutComplete( int guid ){
+		anInt = guidsIn.IndexOf( guid );
+		if( anInt >= 0 ){
+			guidsOut.RemoveAt( anInt );
+			actionsOut.RemoveAt( anInt );
+		}
+	}
+
 }
 }

@@ -32,7 +32,7 @@ public class CDelay:BaseCommand{
 	}
 
 	protected override void CancelIn(){
-		EmBox.CallLaterCancel( outGUID );
+		EmBox.CallLaterCancel( inGUID );
 	}
     
 	protected override void DoOut(){
@@ -44,7 +44,7 @@ public class CDelay:BaseCommand{
 	}
 
 	protected override void CancelOut(){
-		EmBox.CallLaterCancel( inGUID );
+		EmBox.CallLaterCancel( outGUID );
 	}
 
    

@@ -2,20 +2,24 @@ using System;
 
 namespace EmBoxUnity.Commands.Core{
 public interface ICommand{
+	int GUID { get; }
+
 	void ExecuteIn();
 
 	void ExecuteOut();
 
 	void Toggle();
  
-	Action FnInComplete{ get; set; }
+	void AddOnInComplete( Action<int> act, int guid );
 
-	Action FnOutComplete{ get; set; }
+	void RemOnInComplete( int guid );
+
+	void AddOnOutComplete( Action<int> act, int guid );
+
+	void RemOnOutComplete( int guid );
 
 	States State{ get; set; }
 
-	bool Cancelable { get; set; }
-  
 }
 }
 

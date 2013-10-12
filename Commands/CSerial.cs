@@ -5,11 +5,17 @@ using UnityEngine;
 
 namespace EmBoxUnity.Commands{
 public class CSerial:BaseCommand, ICommandComposition{
-	private List<ICommand> list;
+	private List<ICommand> cmnds;
+	private List<int> guids;
+	private List<int> guidsInComplete;
+	private List<int> guidsOutComplete;
 	private int cursor = 0;
 
 	private void init(){
-		list = new List<ICommand>();
+		cmnds = new List<ICommand>();
+		guids = new List<int>();
+		guidsInComplete = new List<int>();
+		guidsOutComplete = new List<int>();
 	}
 
 	public CSerial()
@@ -19,68 +25,68 @@ public class CSerial:BaseCommand, ICommandComposition{
 
 	public CSerial( params ICommand[] cmnds ): base( ){
 		init();
-		list.AddRange( cmnds );
+		this.cmnds.AddRange( cmnds );
 		for( int i = 0; i < cmnds.Length; i++ ){
-//			( cmnds[ i ] as ICommand ).FnInComplete = subInCom;
-//			( cmnds[ i ] as ICommand ).FnOutComplete = subOutCom;
+			guids.Add( cmnds[ i ].GUID );
+			guidsInComplete.Add( EmBox.GUID );
+			guidsOutComplete.Add( EmBox.GUID );
 		}
 	}
 
 	public void Add( ICommand cmnd ){
-		list.Add( cmnd );
-//		cmnd.FnInComplete = subInCom;
-//		cmnd.FnOutComplete = subOutCom;
+		cmnds.Add( cmnd );
+		guids.Add( cmnd.GUID );
+		guidsInComplete.Add( EmBox.GUID );
+		guidsOutComplete.Add( EmBox.GUID );
 	}
 
 	protected override void DoIn(){
-		if( list.Count == 0 ){
+		if( cmnds.Count == 0 ){
 			ExecuteInComplete();
 			return;
 		}
-		list[ cursor ].FnInComplete = subInCom;
-		list[ cursor ].ExecuteIn();
+		cmnds[ cursor ].AddOnInComplete( subInCom, guidsInComplete[ cursor ] );
+		cmnds[ cursor ].ExecuteIn();
 	}
 
-		protected override void CancelIn(){
-		list[ cursor ].FnInComplete = null;
-		list[ cursor ].FnOutComplete = subOutCom;
-		list[ cursor ].ExecuteOut();
+	protected override void CancelIn(){
+		cmnds[ cursor ].RemOnInComplete( guidsInComplete[ cursor ] );
 	}
 
 	protected override void DoOut(){
-		if( list.Count == 0 ){
+		if( cmnds.Count == 0 ){
 			ExecuteOutComplete();
 			return;
 		}
-		list[ cursor ].FnOutComplete = subOutCom;
-		list[ cursor ].ExecuteOut();
+		cmnds[ cursor ].AddOnOutComplete( subOutCom, guidsOutComplete[ cursor ] );
+		cmnds[ cursor ].ExecuteOut();
 	}
 
-		protected override void CancelOut(){
-		list[ cursor ].FnOutComplete = null;
-		list[ cursor ].FnInComplete = subInCom;
-		list[ cursor ].ExecuteIn();
+	protected override void CancelOut(){
+		cmnds[ cursor ].RemOnOutComplete( guidsOutComplete[ cursor ] );
 	}
 
-	private void subInCom(){
-		list[ cursor ].FnInComplete = null;
-		if( cursor == list.Count - 1 ){
+	private void subInCom( int guid ){
+		int index = guidsInComplete.IndexOf( guid );
+		cmnds[ index ].RemOnInComplete( guid );
+		if( cursor == cmnds.Count - 1 ){
 			ExecuteInComplete();
 		} else{
 			cursor++;
-			list[ cursor ].FnInComplete = subInCom;
-			list[ cursor ].ExecuteIn();
+			cmnds[ cursor ].AddOnInComplete( subInCom, guidsInComplete[ cursor ] );
+			cmnds[ cursor ].ExecuteIn();
 		}
 	}
 
-	private void subOutCom(){
-		list[ cursor ].FnOutComplete = null;
+	private void subOutCom( int guid ){
+		int index = guidsOutComplete.IndexOf( guid );
+		cmnds[ index ].RemOnOutComplete( guid );
 		if( cursor == 0 ){
 			ExecuteOutComplete();
 		} else{
 			cursor--;
-			list[ cursor ].FnOutComplete = subOutCom;
-			list[ cursor ].ExecuteOut();
+			cmnds[ cursor ].AddOnOutComplete( subOutCom, guidsOutComplete[ cursor ] );
+			cmnds[ cursor ].ExecuteOut();
 		}
 	}
 }
