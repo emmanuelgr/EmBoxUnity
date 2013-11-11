@@ -46,6 +46,7 @@ public class COverlap:BaseCommand, ICommandComposition{
 	}
 
 	public void Add( ICommand cmnd ){
+//			if(cmnd==null)return;
 		cmnds.Add( cmnd );
 		guids.Add( cmnd.GUID );
 		guidsIn.Add( EmBox.GUID );
